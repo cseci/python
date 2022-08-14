@@ -45,9 +45,8 @@
 :Editor: Raymond Hettinger
 
 This article explains the new features in Python 3.8, compared to 3.7.
+Python 3.8 was released on October 14, 2019.
 For full details, see the :ref:`changelog <changelog>`.
-
-Python 3.8 was released on October 14th, 2019.
 
 .. testsetup::
 
@@ -213,12 +212,12 @@ Python now uses the same ABI whether it's built in release or debug mode. On
 Unix, when Python is built in debug mode, it is now possible to load C
 extensions built in release mode and C extensions built using the stable ABI.
 
-Release builds and debug builds are now ABI compatible: defining the
+Release builds and :ref:`debug builds <debug-build>` are now ABI compatible: defining the
 ``Py_DEBUG`` macro no longer implies the ``Py_TRACE_REFS`` macro, which
 introduces the only ABI incompatibility. The ``Py_TRACE_REFS`` macro, which
 adds the :func:`sys.getobjects` function and the :envvar:`PYTHONDUMPREFS`
-environment variable, can be set using the new ``./configure --with-trace-refs``
-build option.
+environment variable, can be set using the new :option:`./configure
+--with-trace-refs <--with-trace-refs>` build option.
 (Contributed by Victor Stinner in :issue:`36465`.)
 
 On Unix, C extensions are no longer linked to libpython except on Android
@@ -348,20 +347,21 @@ See :pep:`587` for a full description.
 (Contributed by Victor Stinner in :issue:`36763`.)
 
 
-Vectorcall: a fast calling protocol for CPython
------------------------------------------------
+PEP 590: Vectorcall: a fast calling protocol for CPython
+--------------------------------------------------------
 
-The "vectorcall" protocol is added to the Python/C API.
+:ref:`vectorcall` is added to the Python/C API.
 It is meant to formalize existing optimizations which were already done
 for various classes.
-Any extension type implementing a callable can use this protocol.
+Any :ref:`static type <static-types>` implementing a callable can use this
+protocol.
 
 This is currently provisional.
 The aim is to make it fully public in Python 3.9.
 
 See :pep:`590` for a full description.
 
-(Contributed by Jeroen Demeyer and Mark Shannon in :issue:`36974`.)
+(Contributed by Jeroen Demeyer, Mark Shannon and Petr Viktorin in :issue:`36974`.)
 
 
 Pickle protocol 5 with out-of-band data buffers
@@ -430,8 +430,8 @@ Other Language Changes
             lastname, *members = family.split()
             return lastname.upper(), *members
 
-    >>> parse('simpsons homer marge bart lisa sally')
-    ('SIMPSONS', 'homer', 'marge', 'bart', 'lisa', 'sally')
+    >>> parse('simpsons homer marge bart lisa maggie')
+    ('SIMPSONS', 'homer', 'marge', 'bart', 'lisa', 'maggie')
 
   (Contributed by David Cuthbert and Jordan Chapman in :issue:`32117`.)
 
@@ -906,7 +906,7 @@ for :func:`property`, :func:`classmethod`, and :func:`staticmethod`::
 io
 --
 
-In development mode (:option:`-X` ``env``) and in debug build, the
+In development mode (:option:`-X` ``env``) and in :ref:`debug build <debug-build>`, the
 :class:`io.IOBase` finalizer now logs the exception if the ``close()`` method
 fails. The exception is ignored silently by default in release build.
 (Contributed by Victor Stinner in :issue:`18748`.)
@@ -1491,7 +1491,7 @@ Optimizations
   first introduced in Python 3.4.  It offers better performance and smaller
   size compared to Protocol 3 available since Python 3.0.
 
-* Removed one ``Py_ssize_t`` member from ``PyGC_Head``.  All GC tracked
+* Removed one :c:type:`Py_ssize_t` member from ``PyGC_Head``.  All GC tracked
   objects (e.g. tuple, list, dict) size is reduced 4 or 8 bytes.
   (Contributed by Inada Naoki in :issue:`33597`.)
 
@@ -2005,6 +2005,8 @@ Changes in the Python API
   ``replace()`` method of :class:`types.CodeType` can be used to make the code
   future-proof.
 
+* The parameter ``digestmod`` for :func:`hmac.new` no longer uses the MD5 digest
+  by default.
 
 Changes in the C API
 --------------------
@@ -2042,7 +2044,7 @@ Changes in the C API
   This makes types created through :c:func:`PyType_FromSpec` behave like
   other classes in managed code.
 
-  Statically allocated types are not affected.
+  :ref:`Statically allocated types <static-types>` are not affected.
 
   For the vast majority of cases, there should be no side effect.
   However, types that manually increase the reference count after allocating
@@ -2237,21 +2239,6 @@ details, see the documentation for ``loop.create_datagram_endpoint()``.
 (Contributed by Kyle Stanley, Antoine Pitrou, and Yury Selivanov in
 :issue:`37228`.)
 
-Notable changes in Python 3.8.2
-===============================
-
-Fixed a regression with the ``ignore`` callback of :func:`shutil.copytree`.
-The argument types are now str and List[str] again.
-(Contributed by Manuel Barkhau and Giampaolo Rodola in :issue:`39390`.)
-
-Notable changes in Python 3.8.3
-===============================
-
-The constant values of future flags in the :mod:`__future__` module
-are updated in order to prevent collision with compiler flags. Previously
-``PyCF_ALLOW_TOP_LEVEL_AWAIT`` was clashing with ``CO_FUTURE_DIVISION``.
-(Contributed by Batuhan Taskaya in :issue:`39562`)
-
 Notable changes in Python 3.8.8
 ===============================
 
@@ -2265,33 +2252,15 @@ functions internally. For more details, please see their respective
 documentation.
 (Contributed by Adam Goldschmidt, Senthil Kumaran and Ken Jin in :issue:`42967`.)
 
-Notable changes in Python 3.8.9
-===============================
-
-A security fix alters the :class:`ftplib.FTP` behavior to not trust the
-IPv4 address sent from the remote server when setting up a passive data
-channel.  We reuse the ftp server IP address instead.  For unusual code
-requiring the old behavior, set a ``trust_server_pasv_ipv4_address``
-attribute on your FTP instance to ``True``.  (See :issue:`43285`)
-
-Notable changes in Python 3.8.10
+Notable changes in Python 3.8.12
 ================================
 
-macOS 11.0 (Big Sur) and Apple Silicon Mac support
---------------------------------------------------
+Starting with Python 3.8.12 the :mod:`ipaddress` module no longer accepts
+any leading zeros in IPv4 address strings. Leading zeros are ambiguous and
+interpreted as octal notation by some libraries. For example the legacy
+function :func:`socket.inet_aton` treats leading zeros as octal notation.
+glibc implementation of modern :func:`~socket.inet_pton` does not accept
+any leading zeros.
 
-As of 3.8.10, Python now supports building and running on macOS 11
-(Big Sur) and on Apple Silicon Macs (based on the ``ARM64`` architecture).
-A new universal build variant, ``universal2``, is now available to natively
-support both ``ARM64`` and ``Intel 64`` in one set of executables.
-Note that support for "weaklinking", building binaries targeted for newer
-versions of macOS that will also run correctly on older versions by
-testing at runtime for missing features, is not included in this backport
-from Python 3.9; to support a range of macOS versions, continue to target
-for and build on the oldest version in the range.
-
-(Originally contributed by Ronald Oussoren and Lawrence D'Anna in :issue:`41100`,
-with fixes by FX Coudert and Eli Rykoff, and backported to 3.8 by Maxime Bélanger
-and Ned Deily)
-
-
+(Originally contributed by Christian Heimes in :issue:`36384`, and backported
+to 3.8 by Achraf Merzouki.)

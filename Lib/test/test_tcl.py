@@ -4,10 +4,13 @@ import re
 import subprocess
 import sys
 import os
+import warnings
 from test import support
+from test.support import import_helper
+from test.support import os_helper
 
 # Skip this test if the _tkinter module wasn't built.
-_tkinter = support.import_module('_tkinter')
+_tkinter = import_helper.import_module('_tkinter')
 
 import tkinter
 from tkinter import Tcl
@@ -40,8 +43,14 @@ def get_tk_patchlevel():
 class TkinterTest(unittest.TestCase):
 
     def testFlattenLen(self):
-        # flatten(<object with no length>)
+        # Object without length.
         self.assertRaises(TypeError, _tkinter._flatten, True)
+        # Object with length, but not sequence.
+        self.assertRaises(TypeError, _tkinter._flatten, {})
+        # Sequence or set, but not tuple or list.
+        # (issue44608: there were leaks in the following cases)
+        self.assertRaises(TypeError, _tkinter._flatten, 'string')
+        self.assertRaises(TypeError, _tkinter._flatten, {'set'})
 
 
 class TclTest(unittest.TestCase):
@@ -199,8 +208,8 @@ class TclTest(unittest.TestCase):
 
     def testEvalFile(self):
         tcl = self.interp
-        filename = support.TESTFN
-        self.addCleanup(support.unlink, filename)
+        filename = os_helper.TESTFN_ASCII
+        self.addCleanup(os_helper.unlink, filename)
         with open(filename, 'w') as f:
             f.write("""set a 1
             set b 2
@@ -213,8 +222,8 @@ class TclTest(unittest.TestCase):
 
     def test_evalfile_null_in_result(self):
         tcl = self.interp
-        filename = support.TESTFN
-        self.addCleanup(support.unlink, filename)
+        filename = os_helper.TESTFN_ASCII
+        self.addCleanup(os_helper.unlink, filename)
         with open(filename, 'w') as f:
             f.write("""
             set a "a\0b"
@@ -230,8 +239,8 @@ class TclTest(unittest.TestCase):
         self.addCleanup(tcl.call, 'encoding', 'system', encoding)
         tcl.call('encoding', 'system', 'utf-8')
 
-        filename = support.TESTFN
-        self.addCleanup(support.unlink, filename)
+        filename = os_helper.TESTFN_ASCII
+        self.addCleanup(os_helper.unlink, filename)
         with open(filename, 'wb') as f:
             f.write(b"""
             set a "<\xed\xa0\xbd\xed\xb2\xbb>"
@@ -269,7 +278,7 @@ class TclTest(unittest.TestCase):
         if not os.path.exists(unc_name):
             raise unittest.SkipTest('Cannot connect to UNC Path')
 
-        with support.EnvironmentVarGuard() as env:
+        with os_helper.EnvironmentVarGuard() as env:
             env.unset("TCL_LIBRARY")
             stdout = subprocess.check_output(
                     [unc_name, '-c', 'import tkinter; print(tkinter)'])
@@ -611,9 +620,12 @@ class TclTest(unittest.TestCase):
     def test_split(self):
         split = self.interp.tk.split
         call = self.interp.tk.call
-        self.assertRaises(TypeError, split)
-        self.assertRaises(TypeError, split, 'a', 'b')
-        self.assertRaises(TypeError, split, 2)
+        with warnings.catch_warnings():
+            warnings.filterwarnings('ignore', r'\bsplit\b.*\bsplitlist\b',
+                                    DeprecationWarning)
+            self.assertRaises(TypeError, split)
+            self.assertRaises(TypeError, split, 'a', 'b')
+            self.assertRaises(TypeError, split, 2)
         testcases = [
             ('2', '2'),
             ('', ''),
@@ -655,7 +667,8 @@ class TclTest(unittest.TestCase):
                     expected),
             ]
         for arg, res in testcases:
-            self.assertEqual(split(arg), res, msg=arg)
+            with self.assertWarns(DeprecationWarning):
+                self.assertEqual(split(arg), res, msg=arg)
 
     def test_splitdict(self):
         splitdict = tkinter._splitdict
@@ -729,8 +742,11 @@ class TclTest(unittest.TestCase):
         check('{\n')
         check('}\n')
 
+    @support.cpython_only
     def test_new_tcl_obj(self):
-        self.assertRaises(TypeError, _tkinter.Tcl_Obj)
+        support.check_disallow_instantiation(self, _tkinter.Tcl_Obj)
+        support.check_disallow_instantiation(self, _tkinter.TkttType)
+        support.check_disallow_instantiation(self, _tkinter.TkappType)
 
 class BigmemTclTest(unittest.TestCase):
 
@@ -788,8 +804,5 @@ def setUpModule():
         print('patchlevel =', tcl.call('info', 'patchlevel'))
 
 
-def test_main():
-    support.run_unittest(TclTest, TkinterTest, BigmemTclTest)
-
 if __name__ == "__main__":
-    test_main()
+    unittest.main()

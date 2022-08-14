@@ -490,7 +490,7 @@ environment was declined.
 :mod:`ensurepip` includes a bundled copy of ``pip``, up-to-date as of the first
 release candidate of the release of CPython with which it ships (this applies
 to both maintenance releases and feature releases).  ``ensurepip`` does not
-access the internet.  If the installation has Internet access, after
+access the internet.  If the installation has internet access, after
 ``ensurepip`` is run the bundled ``pip`` can be used to upgrade ``pip`` to a
 more recent release than the bundled one.  (Note that such an upgraded version
 of ``pip`` is considered to be a separately installed package and will not be
@@ -1659,7 +1659,7 @@ The :class:`~unittest.TestCase` class has a new method,
 :keyword:`with` block becomes a "sub-test".  This context manager allows a test
 method to dynamically generate subtests  by, say, calling the ``subTest``
 context manager inside a loop.  A single test method can thereby produce an
-indefinite number of separately-identified and separately-counted tests, all of
+indefinite number of separately identified and separately counted tests, all of
 which will run even if one or more of them fail.  For example::
 
     class NumbersTest(unittest.TestCase):
@@ -2056,7 +2056,7 @@ Significant Optimizations
   ``malloc`` in ``obmalloc``.  Artificial benchmarks show about a 3% memory
   savings.
 
-* :func:`os.urandom` now uses a lazily-opened persistent file descriptor
+* :func:`os.urandom` now uses a lazily opened persistent file descriptor
   so as to avoid using many file descriptors when run in parallel from
   multiple threads.  (Contributed by Antoine Pitrou in :issue:`18756`.)
 

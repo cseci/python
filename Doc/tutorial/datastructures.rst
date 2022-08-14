@@ -268,10 +268,10 @@ it must be parenthesized. ::
    [(0, 0), (1, 1), (2, 4), (3, 9), (4, 16), (5, 25)]
    >>> # the tuple must be parenthesized, otherwise an error is raised
    >>> [x, x**2 for x in range(6)]
-     File "<stdin>", line 1, in <module>
+     File "<stdin>", line 1
        [x, x**2 for x in range(6)]
-                  ^
-   SyntaxError: invalid syntax
+        ^^^^^^^
+   SyntaxError: did you forget parentheses around the comprehension target?
    >>> # flatten a list using a listcomp with two 'for'
    >>> vec = [[1,2,3], [4,5,6], [7,8,9]]
    >>> [num for elem in vec for num in elem]
@@ -614,6 +614,21 @@ To loop over a sequence in sorted order, use the :func:`sorted` function which
 returns a new sorted list while leaving the source unaltered. ::
 
    >>> basket = ['apple', 'orange', 'apple', 'pear', 'orange', 'banana']
+   >>> for i in sorted(basket):
+   ...     print(i)
+   ...
+   apple
+   apple
+   banana
+   orange
+   orange
+   pear
+
+Using :func:`set` on a sequence eliminates duplicate elements. The use of
+:func:`sorted` in combination with :func:`set` over a sequence is an idiomatic
+way to loop over unique elements of the sequence in sorted order. ::
+
+   >>> basket = ['apple', 'orange', 'apple', 'pear', 'orange', 'banana']
    >>> for f in sorted(set(basket)):
    ...     print(f)
    ...
@@ -644,11 +659,12 @@ More on Conditions
 The conditions used in ``while`` and ``if`` statements can contain any
 operators, not just comparisons.
 
-The comparison operators ``in`` and ``not in`` check whether a value occurs
-(does not occur) in a sequence.  The operators ``is`` and ``is not`` compare
-whether two objects are really the same object; this only matters for mutable
-objects like lists.  All comparison operators have the same priority, which is
-lower than that of all numerical operators.
+
+The comparison operators ``in`` and ``not in`` are membership tests that
+determine whether a value is in (or not in) a container.  The operators ``is``
+and ``is not`` compare whether two objects are really the same object.  All
+comparison operators have the same priority, which is lower than that of all
+numerical operators.
 
 Comparisons can be chained.  For example, ``a < b == c`` tests whether ``a`` is
 less than ``b`` and moreover ``b`` equals ``c``.

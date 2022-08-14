@@ -53,13 +53,18 @@ an event loop:
    Consider also using the :func:`asyncio.run` function instead of using
    lower level functions to manually create and close an event loop.
 
+   .. deprecated:: 3.10
+      Deprecation warning is emitted if there is no running event loop.
+      In future Python releases, this function will be an alias of
+      :func:`get_running_loop`.
+
 .. function:: set_event_loop(loop)
 
    Set *loop* as a current event loop for the current OS thread.
 
 .. function:: new_event_loop()
 
-   Create a new event loop object.
+   Create and return a new event loop object.
 
 Note that the behaviour of :func:`get_event_loop`, :func:`set_event_loop`,
 and :func:`new_event_loop` functions can be altered by
@@ -173,6 +178,18 @@ Running and stopping the loop
 
    .. versionadded:: 3.6
 
+.. coroutinemethod:: loop.shutdown_default_executor()
+
+   Schedule the closure of the default executor and wait for it to join all of
+   the threads in the :class:`ThreadPoolExecutor`. After calling this method, a
+   :exc:`RuntimeError` will be raised if :meth:`loop.run_in_executor` is called
+   while using the default executor.
+
+   Note that there is no need to call this function when
+   :func:`asyncio.run` is used.
+
+   .. versionadded:: 3.9
+
 
 Scheduling callbacks
 ^^^^^^^^^^^^^^^^^^^^
@@ -198,6 +215,10 @@ Scheduling callbacks
 
    A thread-safe variant of :meth:`call_soon`.  Must be used to
    schedule callbacks *from another thread*.
+
+   Raises :exc:`RuntimeError` if called on a loop that's been closed.
+   This can happen on a secondary thread when the main application is
+   shutting down.
 
    See the :ref:`concurrency and multithreading <asyncio-multithreading>`
    section of the documentation.
@@ -322,7 +343,7 @@ Creating Futures and Tasks
    the name of the task using :meth:`Task.set_name`.
 
    .. versionchanged:: 3.8
-      Added the ``name`` parameter.
+      Added the *name* parameter.
 
 .. method:: loop.set_task_factory(factory)
 
@@ -428,14 +449,27 @@ Opening network connections
      and *local_addr* should be specified.
 
    * *local_addr*, if given, is a ``(local_host, local_port)`` tuple used
-     to bind the socket to locally.  The *local_host* and *local_port*
+     to bind the socket locally.  The *local_host* and *local_port*
      are looked up using ``getaddrinfo()``, similarly to *host* and *port*.
 
    * *ssl_handshake_timeout* is (for a TLS connection) the time in seconds
      to wait for the TLS handshake to complete before aborting the connection.
      ``60.0`` seconds if ``None`` (default).
 
-   .. versionadded:: 3.8
+   .. versionchanged:: 3.5
+
+      Added support for SSL/TLS in :class:`ProactorEventLoop`.
+
+   .. versionchanged:: 3.6
+
+      The socket option :py:data:`~socket.TCP_NODELAY` is set by default
+      for all TCP connections.
+
+   .. versionchanged:: 3.7
+
+      Added the *ssl_handshake_timeout* parameter.
+
+   .. versionchanged:: 3.8
 
       Added the *happy_eyeballs_delay* and *interleave* parameters.
 
@@ -449,19 +483,6 @@ Opening network connections
       delay and provides an algorithm.
 
       For more information: https://tools.ietf.org/html/rfc6555
-
-   .. versionadded:: 3.7
-
-      The *ssl_handshake_timeout* parameter.
-
-   .. versionchanged:: 3.6
-
-      The socket option :py:data:`~socket.TCP_NODELAY` is set by default
-      for all TCP connections.
-
-   .. versionchanged:: 3.5
-
-      Added support for SSL/TLS in :class:`ProactorEventLoop`.
 
    .. seealso::
 
@@ -506,7 +527,7 @@ Opening network connections
    Other arguments:
 
    * *local_addr*, if given, is a ``(local_host, local_port)`` tuple used
-     to bind the socket to locally.  The *local_host* and *local_port*
+     to bind the socket locally.  The *local_host* and *local_port*
      are looked up using :meth:`getaddrinfo`.
 
    * *remote_addr*, if given, is a ``(remote_host, remote_port)`` tuple used
@@ -567,12 +588,8 @@ Opening network connections
 
    .. availability:: Unix.
 
-   .. versionadded:: 3.7
-
-      The *ssl_handshake_timeout* parameter.
-
    .. versionchanged:: 3.7
-
+      Added the *ssl_handshake_timeout* parameter.
       The *path* parameter can now be a :term:`path-like object`.
 
 
@@ -610,6 +627,11 @@ Creating network servers
        assumed and a list of multiple sockets will be returned (most likely
        one for IPv4 and another one for IPv6).
 
+   * The *port* parameter can be set to specify which port the server should
+     listen on. If ``0`` or ``None`` (the default), a random unused port will
+     be selected (note that if *host* resolves to multiple network interfaces,
+     a different random port will be selected for each interface).
+
    * *family* can be set to either :data:`socket.AF_INET` or
      :data:`~socket.AF_INET6` to force the socket to use IPv4 or IPv6.
      If not set, the *family* will be determined from host name
@@ -646,15 +668,6 @@ Creating network servers
      :meth:`Server.serve_forever` to make the server to start accepting
      connections.
 
-   .. versionadded:: 3.7
-
-      Added *ssl_handshake_timeout* and *start_serving* parameters.
-
-   .. versionchanged:: 3.6
-
-      The socket option :py:data:`~socket.TCP_NODELAY` is set by default
-      for all TCP connections.
-
    .. versionchanged:: 3.5
 
       Added support for SSL/TLS in :class:`ProactorEventLoop`.
@@ -662,6 +675,12 @@ Creating network servers
    .. versionchanged:: 3.5.1
 
       The *host* parameter can be a sequence of strings.
+
+   .. versionchanged:: 3.6
+
+      Added *ssl_handshake_timeout* and *start_serving* parameters.
+      The socket option :py:data:`~socket.TCP_NODELAY` is set by default
+      for all TCP connections.
 
    .. seealso::
 
@@ -687,12 +706,9 @@ Creating network servers
 
    .. availability:: Unix.
 
-   .. versionadded:: 3.7
-
-      The *ssl_handshake_timeout* and *start_serving* parameters.
-
    .. versionchanged:: 3.7
 
+      Added the *ssl_handshake_timeout* and *start_serving* parameters.
       The *path* parameter can now be a :class:`~pathlib.Path` object.
 
 .. coroutinemethod:: loop.connect_accepted_socket(protocol_factory, \
@@ -720,11 +736,11 @@ Creating network servers
 
    Returns a ``(transport, protocol)`` pair.
 
-   .. versionadded:: 3.7
-
-      The *ssl_handshake_timeout* parameter.
-
    .. versionadded:: 3.5.3
+
+   .. versionchanged:: 3.7
+
+      Added the *ssl_handshake_timeout* parameter.
 
 
 Transferring files
@@ -1172,10 +1188,13 @@ Allows customizing how exceptions are handled in the event loop.
    * 'message': Error message;
    * 'exception' (optional): Exception object;
    * 'future' (optional): :class:`asyncio.Future` instance;
+   * 'task' (optional): :class:`asyncio.Task` instance;
    * 'handle' (optional): :class:`asyncio.Handle` instance;
    * 'protocol' (optional): :ref:`Protocol <asyncio-protocol>` instance;
    * 'transport' (optional): :ref:`Transport <asyncio-transport>` instance;
-   * 'socket' (optional): :class:`socket.socket` instance.
+   * 'socket' (optional): :class:`socket.socket` instance;
+   * 'asyncgen' (optional): Asynchronous generator that caused
+                            the exception.
 
    .. note::
 
@@ -1200,7 +1219,7 @@ Enabling debug mode
 
    .. versionchanged:: 3.7
 
-      The new ``-X dev`` command line option can now also be used
+      The new :ref:`Python Development Mode <devmode>` can now also be used
       to enable the debug mode.
 
 .. seealso::
@@ -1218,9 +1237,10 @@ async/await code consider using the high-level
 
 .. note::
 
-   The default asyncio event loop on **Windows** does not support
-   subprocesses. See :ref:`Subprocess Support on Windows
-   <asyncio-windows-subprocess>` for details.
+   On Windows, the default event loop :class:`ProactorEventLoop` supports
+   subprocesses, whereas :class:`SelectorEventLoop` does not. See
+   :ref:`Subprocess Support on Windows <asyncio-windows-subprocess>` for
+   details.
 
 .. coroutinemethod:: loop.subprocess_exec(protocol_factory, *args, \
                       stdin=subprocess.PIPE, stdout=subprocess.PIPE, \

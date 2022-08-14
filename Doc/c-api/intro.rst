@@ -107,10 +107,23 @@ complete listing.
 
 .. c:macro:: Py_UNREACHABLE()
 
-   Use this when you have a code path that you do not expect to be reached.
+   Use this when you have a code path that cannot be reached by design.
    For example, in the ``default:`` clause in a ``switch`` statement for which
    all possible values are covered in ``case`` statements.  Use this in places
    where you might be tempted to put an ``assert(0)`` or ``abort()`` call.
+
+   In release mode, the macro helps the compiler to optimize the code, and
+   avoids a warning about unreachable code.  For example, the macro is
+   implemented with ``__builtin_unreachable()`` on GCC in release mode.
+
+   A use for ``Py_UNREACHABLE()`` is following a call a function that
+   never returns but that is not declared :c:macro:`_Py_NO_RETURN`.
+
+   If a code path is very unlikely code but can be reached under exceptional
+   case, this macro must not be used.  For example, under low memory condition
+   or if a system call returns a value out of the expected range.  In this
+   case, it's better to report the error to the caller.  If the error cannot
+   be reported to caller, :c:func:`Py_FatalError` can be used.
 
    .. versionadded:: 3.7
 
@@ -313,7 +326,7 @@ when it's no longer needed---or passing on this responsibility (usually to its
 caller). When a function passes ownership of a reference on to its caller, the
 caller is said to receive a *new* reference.  When no ownership is transferred,
 the caller is said to *borrow* the reference. Nothing needs to be done for a
-borrowed reference.
+:term:`borrowed reference`.
 
 Conversely, when a calling function passes in a reference to an  object, there
 are two possibilities: the function *steals* a  reference to the object, or it
@@ -488,6 +501,13 @@ describe static tables used to list the functions exported  by a module or the
 data attributes of a new object type, and another is used to describe the value
 of a complex number.  These will  be discussed together with the functions that
 use them.
+
+.. c:type:: Py_ssize_t
+
+   A signed integral type such that ``sizeof(Py_ssize_t) == sizeof(size_t)``.
+   C99 doesn't define such a thing directly (size_t is an unsigned integral type).
+   See :pep:`353` for details. ``PY_SSIZE_T_MAX`` is the largest positive value
+   of type :c:type:`Py_ssize_t`.
 
 
 .. _api-exceptions:
@@ -726,46 +746,25 @@ A full list of the various types of debugging builds is in the file
 :file:`Misc/SpecialBuilds.txt` in the Python source distribution. Builds are
 available that support tracing of reference counts, debugging the memory
 allocator, or low-level profiling of the main interpreter loop.  Only the most
-frequently-used builds will be described in the remainder of this section.
+frequently used builds will be described in the remainder of this section.
 
 Compiling the interpreter with the :c:macro:`Py_DEBUG` macro defined produces
-what is generally meant by "a debug build" of Python. :c:macro:`Py_DEBUG` is
-enabled in the Unix build by adding ``--with-pydebug`` to the
-:file:`./configure` command.  It is also implied by the presence of the
+what is generally meant by :ref:`a debug build of Python <debug-build>`.
+:c:macro:`Py_DEBUG` is enabled in the Unix build by adding
+:option:`--with-pydebug` to the :file:`./configure` command.
+It is also implied by the presence of the
 not-Python-specific :c:macro:`_DEBUG` macro.  When :c:macro:`Py_DEBUG` is enabled
 in the Unix build, compiler optimization is disabled.
 
-In addition to the reference count debugging described below, the following
-extra checks are performed:
+In addition to the reference count debugging described below, extra checks are
+performed, see :ref:`Python Debug Build <debug-build>`.
 
-* Extra checks are added to the object allocator.
-
-* Extra checks are added to the parser and compiler.
-
-* Downcasts from wide types to narrow types are checked for loss of information.
-
-* A number of assertions are added to the dictionary and set implementations.
-  In addition, the set object acquires a :meth:`test_c_api` method.
-
-* Sanity checks of the input arguments are added to frame creation.
-
-* The storage for ints is initialized with a known invalid pattern to catch
-  reference to uninitialized digits.
-
-* Low-level tracing and extra exception checking are added to the runtime
-  virtual machine.
-
-* Extra checks are added to the memory arena implementation.
-
-* Extra debugging is added to the thread module.
-
-There may be additional checks not mentioned here.
-
-Defining :c:macro:`Py_TRACE_REFS` enables reference tracing.  When defined, a
-circular doubly linked list of active objects is maintained by adding two extra
+Defining :c:macro:`Py_TRACE_REFS` enables reference tracing
+(see the :option:`configure --with-trace-refs option <--with-trace-refs>`).
+When defined, a circular doubly linked list of active objects is maintained by adding two extra
 fields to every :c:type:`PyObject`.  Total allocations are tracked as well.  Upon
 exit, all existing references are printed.  (In interactive mode this happens
-after every statement run by the interpreter.)  Implied by :c:macro:`Py_DEBUG`.
+after every statement run by the interpreter.)
 
 Please refer to :file:`Misc/SpecialBuilds.txt` in the Python source distribution
 for more detailed information.

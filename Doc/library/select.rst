@@ -252,7 +252,7 @@ object.
 
 .. method:: devpoll.poll([timeout])
 
-   Polls the set of registered file descriptors, and returns a possibly-empty list
+   Polls the set of registered file descriptors, and returns a possibly empty list
    containing ``(fd, event)`` 2-tuples for the descriptors that have events or
    errors to report. *fd* is the file descriptor, and *event* is a bitmask with
    bits set for the reported events for that descriptor --- :const:`POLLIN` for
@@ -355,6 +355,9 @@ Edge and Level Trigger Polling (epoll) Objects
 
    Remove a registered file descriptor from the epoll object.
 
+   .. versionchanged:: 3.9
+      The method no longer ignores the :data:`~errno.EBADF` error.
+
 
 .. method:: epoll.poll(timeout=None, maxevents=-1)
 
@@ -437,7 +440,7 @@ linearly scanned again. :c:func:`select` is O(highest file descriptor), while
 
 .. method:: poll.poll([timeout])
 
-   Polls the set of registered file descriptors, and returns a possibly-empty list
+   Polls the set of registered file descriptors, and returns a possibly empty list
    containing ``(fd, event)`` 2-tuples for the descriptors that have events or
    errors to report. *fd* is the file descriptor, and *event* is a bitmask with
    bits set for the reported events for that descriptor --- :const:`POLLIN` for
@@ -531,7 +534,7 @@ https://www.freebsd.org/cgi/man.cgi?query=kqueue&sektion=2
    | :const:`KQ_FILTER_PROC`   | Watch for events on a process id            |
    +---------------------------+---------------------------------------------+
    | :const:`KQ_FILTER_NETDEV` | Watch for events on a network device        |
-   |                           | [not available on Mac OS X]                 |
+   |                           | [not available on macOS]                    |
    +---------------------------+---------------------------------------------+
    | :const:`KQ_FILTER_SIGNAL` | Returns whenever the watched signal is      |
    |                           | delivered to the process                    |
@@ -623,7 +626,7 @@ https://www.freebsd.org/cgi/man.cgi?query=kqueue&sektion=2
    | :const:`KQ_NOTE_TRACKERR`  | unable to attach to a child                |
    +----------------------------+--------------------------------------------+
 
-   :const:`KQ_FILTER_NETDEV` filter flags (not available on Mac OS X):
+   :const:`KQ_FILTER_NETDEV` filter flags (not available on macOS):
 
    +----------------------------+--------------------------------------------+
    | Constant                   | Meaning                                    |

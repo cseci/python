@@ -28,9 +28,9 @@ Executor Objects
    An abstract class that provides methods to execute calls asynchronously.  It
    should not be used directly, but through its concrete subclasses.
 
-    .. method:: submit(fn, *args, **kwargs)
+    .. method:: submit(fn, /, *args, **kwargs)
 
-       Schedules the callable, *fn*, to be executed as ``fn(*args **kwargs)``
+       Schedules the callable, *fn*, to be executed as ``fn(*args, **kwargs)``
        and returns a :class:`Future` object representing the execution of the
        callable. ::
 
@@ -67,7 +67,7 @@ Executor Objects
        .. versionchanged:: 3.5
           Added the *chunksize* argument.
 
-    .. method:: shutdown(wait=True)
+    .. method:: shutdown(wait=True, *, cancel_futures=False)
 
        Signal the executor that it should free any resources that it is using
        when the currently pending futures are done executing.  Calls to
@@ -82,6 +82,15 @@ Executor Objects
        value of *wait*, the entire Python program will not exit until all
        pending futures are done executing.
 
+       If *cancel_futures* is ``True``, this method will cancel all pending
+       futures that the executor has not started running. Any futures that
+       are completed or running won't be cancelled, regardless of the value
+       of *cancel_futures*.
+
+       If both *cancel_futures* and *wait* are ``True``, all futures that the
+       executor has started running will be completed prior to this method
+       returning. The remaining futures are cancelled.
+
        You can avoid having to call this method explicitly if you use the
        :keyword:`with` statement, which will shutdown the :class:`Executor`
        (waiting as if :meth:`Executor.shutdown` were called with *wait* set to
@@ -93,6 +102,9 @@ Executor Objects
               e.submit(shutil.copy, 'src2.txt', 'dest2.txt')
               e.submit(shutil.copy, 'src3.txt', 'dest3.txt')
               e.submit(shutil.copy, 'src4.txt', 'dest4.txt')
+
+       .. versionchanged:: 3.9
+          Added *cancel_futures*.
 
 
 ThreadPoolExecutor
@@ -136,6 +148,13 @@ And::
 
    An :class:`Executor` subclass that uses a pool of at most *max_workers*
    threads to execute calls asynchronously.
+
+   All threads enqueued to ``ThreadPoolExecutor`` will be joined before the
+   interpreter can exit. Note that the exit handler which does this is
+   executed *before* any exit handlers added using `atexit`. This means
+   exceptions in the main thread must be caught and handled in order to
+   signal threads to exit gracefully. For this reason, it is recommended
+   that ``ThreadPoolExecutor`` not be used for long-running tasks.
 
    *initializer* is an optional callable that is called at the start of
    each worker thread; *initargs* is a tuple of arguments passed to the
@@ -338,7 +357,7 @@ The :class:`Future` class encapsulates the asynchronous execution of a callable.
        If the future is cancelled before completing then :exc:`.CancelledError`
        will be raised.
 
-       If the call raised, this method will raise the same exception.
+       If the call raised an exception, this method will raise the same exception.
 
     .. method:: exception(timeout=None)
 
@@ -423,7 +442,8 @@ Module Functions
 .. function:: wait(fs, timeout=None, return_when=ALL_COMPLETED)
 
    Wait for the :class:`Future` instances (possibly created by different
-   :class:`Executor` instances) given by *fs* to complete.  Returns a named
+   :class:`Executor` instances) given by *fs* to complete. Duplicate futures
+   given to *fs* are removed and will be returned only once. Returns a named
    2-tuple of sets.  The first set, named ``done``, contains the futures that
    completed (finished or cancelled futures) before the wait completed.  The
    second set, named ``not_done``, contains the futures that did not complete

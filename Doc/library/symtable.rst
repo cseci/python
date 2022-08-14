@@ -67,13 +67,10 @@ Examining Symbol Tables
       Return ``True`` if the block has nested namespaces within it.  These can
       be obtained with :meth:`get_children`.
 
-   .. method:: has_exec()
-
-      Return ``True`` if the block uses ``exec``.
-
    .. method:: get_identifiers()
 
-      Return a list of names of symbols in this table.
+      Return a view object containing the names of symbols in the table.
+      See the :ref:`documentation of view objects <dict-views>`.
 
    .. method:: lookup(name)
 

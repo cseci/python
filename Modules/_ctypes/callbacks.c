@@ -65,7 +65,7 @@ PyTypeObject PyCThunk_Type = {
     0,                                          /* tp_setattro */
     0,                                          /* tp_as_buffer */
     Py_TPFLAGS_DEFAULT | Py_TPFLAGS_HAVE_GC,                            /* tp_flags */
-    "CThunkObject",                             /* tp_doc */
+    PyDoc_STR("CThunkObject"),                  /* tp_doc */
     CThunkObject_traverse,                      /* tp_traverse */
     CThunkObject_clear,                         /* tp_clear */
     0,                                          /* tp_richcompare */
@@ -86,7 +86,7 @@ PrintError(const char *msg, ...)
     va_list marker;
 
     va_start(marker, msg);
-    vsnprintf(buf, sizeof(buf), msg, marker);
+    PyOS_vsnprintf(buf, sizeof(buf), msg, marker);
     va_end(marker);
     if (f != NULL && f != Py_None)
         PyFile_WriteString(buf, f);
@@ -111,8 +111,9 @@ TryAddRef(StgDictObject *dict, CDataObject *obj)
     IUnknown *punk;
     _Py_IDENTIFIER(_needs_com_addref_);
 
-    if (!_PyDict_GetItemIdWithError((PyObject *)dict, &PyId__needs_com_addref_)) {
-        if (PyErr_Occurred()) {
+    int r = _PyDict_ContainsId((PyObject *)dict, &PyId__needs_com_addref_);
+    if (r <= 0) {
+        if (r < 0) {
             PrintError("getting _needs_com_addref_");
         }
         return;
@@ -426,14 +427,21 @@ CThunkObject *_ctypes_alloc_callback(PyObject *callable,
         PyErr_Format(PyExc_NotImplementedError, "ffi_prep_closure_loc() is missing");
         goto error;
 #else
-#ifdef MACOSX
+#if defined(__clang__) || defined(MACOSX)
         #pragma clang diagnostic push
         #pragma clang diagnostic ignored "-Wdeprecated-declarations"
 #endif
+#if defined(__GNUC__) && ((__GNUC__ > 4) || ((__GNUC__ == 4) && (__GNUC_MINOR__ > 5)))
+        #pragma GCC diagnostic push
+        #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#endif
         result = ffi_prep_closure(p->pcl_write, &p->cif, closure_fcn, p);
 
-#ifdef MACOSX
+#if defined(__clang__) || defined(MACOSX)
         #pragma clang diagnostic pop
+#endif
+#if defined(__GNUC__) && ((__GNUC__ > 4) || ((__GNUC__ == 4) && (__GNUC_MINOR__ > 5)))
+        #pragma GCC diagnostic pop
 #endif
 
 #endif
@@ -461,7 +469,6 @@ static void LoadPython(void)
 {
     if (!Py_IsInitialized()) {
         Py_Initialize();
-        PyEval_InitThreads();
     }
 }
 
